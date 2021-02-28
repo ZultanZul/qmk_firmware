@@ -1,5 +1,17 @@
 #include QMK_KEYBOARD_H
 
+
+
+// HID START
+
+// Add headers for raw hid communication
+#include <split_scomm.h>
+#include "raw_hid.h"
+
+// HID END
+
+
+
 enum sofle_layers {
     /* _M_XYZ = Mac Os, _W_XYZ = Win/Linux */
     _QWERTY,
@@ -137,15 +149,83 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 #ifdef OLED_DRIVER_ENABLE
 
-static void render_logo(void) {
-    static const char PROGMEM qmk_logo[] = {
-        0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x89,0x8a,0x8b,0x8c,0x8d,0x8e,0x8f,0x90,0x91,0x92,0x93,0x94,
-        0xa0,0xa1,0xa2,0xa3,0xa4,0xa5,0xa6,0xa7,0xa8,0xa9,0xaa,0xab,0xac,0xad,0xae,0xaf,0xb0,0xb1,0xb2,0xb3,0xb4,
-        0xc0,0xc1,0xc2,0xc3,0xc4,0xc5,0xc6,0xc7,0xc8,0xc9,0xca,0xcb,0xcc,0xcd,0xce,0xcf,0xd0,0xd1,0xd2,0xd3,0xd4,0
-    };
+// static void render_logo(void) {
+//     static const char PROGMEM qmk_logo[] = {
+//         0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x89,0x8a,0x8b,0x8c,0x8d,0x8e,0x8f,0x90,0x91,0x92,0x93,0x94,
+//         0xa0,0xa1,0xa2,0xa3,0xa4,0xa5,0xa6,0xa7,0xa8,0xa9,0xaa,0xab,0xac,0xad,0xae,0xaf,0xb0,0xb1,0xb2,0xb3,0xb4,
+//         0xc0,0xc1,0xc2,0xc3,0xc4,0xc5,0xc6,0xc7,0xc8,0xc9,0xca,0xcb,0xcc,0xcd,0xce,0xcf,0xd0,0xd1,0xd2,0xd3,0xd4,0
+//     };
 
-    oled_write_P(qmk_logo, false);
+//     oled_write_P(qmk_logo, false);
+// }
+
+// HID START
+
+bool is_hid_connected = false; // Flag indicating if we have a PC connection yet
+uint8_t screen_max_count = 0;  // Number of info screens we can scroll through (set by connecting node script)
+uint8_t screen_show_index = 0; // Current index of the info screen we are displaying
+uint8_t screen_data_buffer[SERIAL_SCREEN_BUFFER_LENGTH - 1] =  {0}; // Buffer used to store the screen data sent by connected node script
+int screen_data_index = 0; // Current index into the screen_data_buffer that we should write to
+
+void raw_hid_send_screen_index(void) {
+  // Send the current info screen index to the connected node script so that it can pass back the new data
+  uint8_t send_data[32] = {0};
+  send_data[0] = screen_show_index + 1; // Add one so that we can distinguish it from a null byte
+  raw_hid_send(send_data, sizeof(send_data));
 }
+
+void raw_hid_receive(uint8_t *data, uint8_t length) {
+  // PC connected, so set the flag to show a message on the master display
+  is_hid_connected = true;
+
+  // Initial connections use '1' in the first byte to indicate this
+  if (length > 1 && data[0] == 1) {
+    // New connection so restart screen_data_buffer
+    screen_data_index = 0;
+
+    // The second byte is the number of info screens the connected node script allows us to scroll through
+    screen_max_count = data[1];
+    if (screen_show_index >= screen_max_count) {
+      screen_show_index = 0;
+    }
+
+    // Tell the connection which info screen we want to look at initially
+    raw_hid_send_screen_index();
+    return;
+  }
+
+  // Otherwise the data we receive is one line of the screen to show on the display
+  if (length >= 21) {
+    // Copy the data into our buffer and increment the number of lines we have got so far
+    memcpy((char*)&screen_data_buffer[screen_data_index * 21], data, 21);
+    screen_data_index++;
+
+    // Once we reach 4 lines, we have a full screen
+    if (screen_data_index == 4) {
+      // Reset the buffer back to receive the next full screen data
+      screen_data_index = 0;
+
+      // Now get ready to transfer the whole 4 lines to the slave side of the keyboard.
+      // First clear the transfer buffer with spaces just in case.
+      memset((char*)&serial_slave_screen_buffer[0], ' ', sizeof(serial_slave_screen_buffer));
+
+      // Copy in the 4 lines of screen data, but start at index 1, we use index 0 to indicate a connection in the slave code
+      memcpy((char*)&serial_slave_screen_buffer[1], screen_data_buffer, sizeof(screen_data_buffer));
+
+      // Set index 0 to indicate a connection has been established
+      serial_slave_screen_buffer[0] = 1;
+
+      // Make sure to zero terminate the buffer
+      serial_slave_screen_buffer[sizeof(serial_slave_screen_buffer) - 1] = 0;
+
+      // Indicate that the screen data has changed and needs transferring to the slave side
+      hid_screen_change = true;
+    }
+  }
+}
+
+// HID END
+
 
 // KEYBOARD PET START
 
@@ -353,6 +433,31 @@ static void render_luna(int LUNA_X, int LUNA_Y) {
 
 
 
+// HID START
+
+char hid_info_str[20];
+const char *write_hid(void) {
+  snprintf(hid_info_str, sizeof(hid_info_str), "%s", is_hid_connected ? "connected." : " ");
+  return hid_info_str;
+}
+
+void write_slave_info_screen(struct CharacterMatrix *matrix) {
+  if (serial_slave_screen_buffer[0] > 0) {
+    // If the first byte of the buffer is non-zero we should have a full set of data to show,
+    // So we copy it into the display
+    matrix_write(matrix, (char*)serial_slave_screen_buffer + 1);
+  } else {
+    // Otherwise we just draw the logo
+    matrix_write_ln(matrix, "");
+    matrix_write(matrix, read_logo());
+  }
+}
+
+// HID END
+
+
+
+
 static void print_status_narrow(void) {
     // Print current mode
     oled_write_P(PSTR("\n\n"), false);
@@ -424,7 +529,7 @@ void oled_task_user(void) {
     if (is_keyboard_master()) {
         print_status_narrow();
     } else {
-        render_logo();
+        write_slave_info_screen(matrix);
     }
 }
 
@@ -625,6 +730,11 @@ void encoder_update_user(uint8_t index, bool clockwise) {
         } else {
             tap_code(KC_VOLD);
         }
+
+        if (is_hid_connected) {
+        raw_hid_send_screen_index();
+      }
+
     } else if (index == 1) {
         if (clockwise) {
             tap_code(KC_PGDOWN);
