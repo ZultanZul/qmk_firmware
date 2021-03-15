@@ -37,30 +37,35 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 
-// #ifdef OLED_DRIVER_ENABLE
-// oled_rotation_t oled_init_user(oled_rotation_t rotation) {
-//     return OLED_ROTATION_270;  // flips the display 180 degrees if offhand
-// }
+#ifdef OLED_DRIVER_ENABLE
+oled_rotation_t oled_init_user(oled_rotation_t rotation) {
+    return OLED_ROTATION_270;  // flips the display 180 degrees if offhand
+}
 
-// void oled_task_user(void) {
-//   // Host Keyboard Layer Status
-//   oled_write_P(PSTR("Let's\nbuild\nsome-\nthing\nto-\nget-\nher!"), false);
+void oled_task_user(void) {
+  // Host Keyboard Layer Status
+//   oled_write_P(PSTR("something\nLet's\nbuild\nsome-\nthing\nto-\nget-\nher!"), false);
+  oled_write_P(PSTR("Did you ever hear the Tragedy of Darth Plagueis the wise? I thought not. It's not a story the Jedi would tell you. It's a Sith legend. "), false);
+
+//   Did you ever hear the Tragedy of Darth Plagueis the wise? I thought not. It's not a story the Jedi would tell you. It's a Sith legend. Darth Plagueis was a Dark Lord of the Sith, so powerful and so wise he could use the Force to influence the midichlorians to create life...
+
+
 //   switch (get_highest_layer(layer_state)) {
-//     case BASE:
-//       oled_write_ln_P(PSTR(""), false);
+//     case _BASE:
+//       oled_write_ln_P(PSTR("\nARROWS"), false);
 //       break;
-//     case FN:
-//       oled_write_ln_P(PSTR("FN"), false);
+//     case _FN1:
+//       oled_write_ln_P(PSTR("\nNUMPAD"), false);
 //       break;
 //     default:
 //       // Or use the write_ln shortcut over adding '\n' to the end of your string
 //       oled_write_ln_P(PSTR("Undef"), false);
 //   }
 
-//   // Host Keyboard LED Status
-//   uint8_t led_usb_state = host_keyboard_leds();
-//   oled_write_P(IS_LED_ON(led_usb_state, USB_LED_NUM_LOCK) ? PSTR("NLCK ") : PSTR("     "), false);
-//   oled_write_P(IS_LED_ON(led_usb_state, USB_LED_CAPS_LOCK) ? PSTR("CAPS ") : PSTR("       "), false);
-//   oled_write_P(IS_LED_ON(led_usb_state, USB_LED_SCROLL_LOCK) ? PSTR("SCRLK") : PSTR("       "), false);
-// }
-// #endif
+  // Host Keyboard LED Status
+  uint8_t led_usb_state = host_keyboard_leds();
+  oled_write_P(IS_LED_ON(led_usb_state, USB_LED_NUM_LOCK) ? PSTR("NLCK ") : PSTR("     "), false);
+  oled_write_P(IS_LED_ON(led_usb_state, USB_LED_CAPS_LOCK) ? PSTR("CAPS ") : PSTR("       "), false);
+  oled_write_P(IS_LED_ON(led_usb_state, USB_LED_SCROLL_LOCK) ? PSTR("SCRLK") : PSTR("       "), false);
+}
+#endif
