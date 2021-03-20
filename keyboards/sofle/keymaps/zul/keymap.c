@@ -507,7 +507,7 @@ static void print_status_narrow(void) {
     switch (get_highest_layer(layer_state)) {
         case _GAMING:
         case _QWERTY:
-            oled_write_P(PSTR("Hi Luna\n"), false);
+            oled_write_P(PSTR("Luna\n"), false);
             break;
         case _RAISE:
             oled_write_P(PSTR("Raise"), false);
