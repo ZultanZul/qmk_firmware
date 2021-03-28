@@ -1,6 +1,6 @@
 
 #undef RGBLED_NUM
-#define RGBLED_NUM 6
+#define RGBLED_NUM 9
 
 #define RGB_DI_PIN D3
 #define RGBLIGHT_ANIMATIONS
