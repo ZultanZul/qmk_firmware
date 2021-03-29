@@ -744,9 +744,9 @@ void encoder_update_user(uint8_t index, bool clockwise) {
         }
     } else if (index == 1) {
         if (clockwise) {
-            tap_code(KC_PGDOWN);
+            tap_code16(LCTL(KC_EQUAL));
         } else {
-            tap_code(KC_PGUP);
+            tap_code16(LCTL(KC_MINUS));
         }
     }
 }
