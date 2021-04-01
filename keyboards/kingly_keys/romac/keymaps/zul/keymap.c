@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 #include QMK_KEYBOARD_H
 
 #define _BASE 0
@@ -21,6 +22,12 @@
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
+/*	 RGB_TOG, RGB_MOD, RGB_HUI, \
+*	RGB_SAI, RGB_VAI, KC_RBRACKET, \
+*
+*	KC_MINUS, KC_EQUAL, KC_GRAVE, \
+*	KC_LBRACKET, KC_UP, KC_RBRACKET, \
+*/
 	[_BASE] = LAYOUT(
 		KC_MINUS, KC_EQUAL, KC_GRAVE, \
 		KC_LBRACKET, KC_UP, KC_RBRACKET, \
@@ -35,6 +42,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 		KC_0, TG(1), KC_ENT \
 	)
 };
+
 
 
 #ifdef OLED_DRIVER_ENABLE
